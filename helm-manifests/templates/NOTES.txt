@@ -1,0 +1,4 @@
+
+Image Pull Secret for GCR:
+
+kubectl create secret docker-registry gcr-json-key --kubeconfig=kubeconfig --docker-server=eu.gcr.io --docker-username=_json_key --docker-password="$(cat ./json-key-file.json)"  --docker-email=adalkilic@ku.edu.tr

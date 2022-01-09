@@ -1,0 +1,86 @@
+name: Build and Deploy k3s on GCP
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+
+jobs:
+  Build-Deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_ID: ${{ secrets.PROJECT_ID }}
+      GCP_DEVOPS_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_DEVOPS_SERVICE_ACCOUNT_KEY }} 
+      VERSION_SUFFIX: ${{ github.run_number }}
+      SERVICE_NAME: demo
+      MASTER_KUBERNETES: k3s-master
+      GCP_REGION: europe-central2-a
+
+    steps:
+    
+      - name: Check Out Repo 
+        uses: actions/checkout@v2
+
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+      - name: flake8 Lint Test for Our Pyton App
+        uses: py-actions/flake8@v2
+        
+ 
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          credentials_json: ${{ secrets.GCP_DEVOPS_SERVICE_ACCOUNT_KEY }}
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v0'
+
+      - name: 'Use gcloud CLI'
+        run: 'gcloud info'
+
+      - name: Install Helm,kubectl,terragrunt and terraform
+        run: |
+          sudo curl -s https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash && \
+          sudo curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+          wget https://github.com/gruntwork-io/terragrunt/releases/download/v0.35.16/terragrunt_linux_amd64  && \
+          mv terragrunt_linux_amd64 terragrunt && \
+          chmod u+x terragrunt && \
+          sudo mv terragrunt /usr/local/bin/terragrunt && \
+          sudo wget https://releases.hashicorp.com/terraform/0.12.2/terraform_0.12.2_linux_amd64.zip && \
+          sudo unzip terraform_0.12.2_linux_amd64.zip && sudo mv terraform /usr/local/bin/terraform
+          
+      - name: Init IAC via terragrunt 
+        run: |
+          gcloud compute config-ssh
+          curl -sLS https://get.k3sup.dev | sh
+          cd terragrunt-iac/dev &&  terragrunt run-all apply  --terragrunt-non-interactive
+
+      - name: Build and push image to gcr
+        run: |-
+          docker build -t eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$VERSION_SUFFIX .
+          gcloud auth configure-docker -q
+          docker push eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$VERSION_SUFFIX    
+          
+          
+      - name: Obtain kubeconfig file from the master node
+        run: |
+           gcloud compute config-ssh && \
+           ssh -tt -oStrictHostKeyChecking=no  $MASTER_KUBERNETES.$GCP_REGION.$PROJECT_ID 'sudo chmod 744 /etc/rancher/k3s/k3s.yaml' && \
+           scp -oStrictHostKeyChecking=no -pr $MASTER_KUBERNETES.$GCP_REGION.$PROJECT_ID:/etc/rancher/k3s/k3s.yaml . && \
+           x=$(gcloud compute instances describe $MASTER_KUBERNETES   --format='get(networkInterfaces[0].accessConfigs[0].natIP)' --zone=$GCP_REGION) && \
+           grep -rl "127.0.0.1" . | xargs sed -i "s/127.0.0.1/$x/g" && \
+           mv k3s.yaml kubeconfig
+
+
+      - name: Helm deploy for mysql and flask app
+        run: |    
+          helm repo add bitnami https://charts.bitnami.com/bitnami --kubeconfig=kubeconfig && \
+          helm upgrade -i mysql bitnami/mysql --set auth.rootPassword="${{ secrets.MYSQL_PASSWORD }}",auth.database="flask_database",global.storageClass="local-path" --kubeconfig=kubeconfig && \
+          helm upgrade -i flask-app helm-manifests/  --set MYSQL_PASSWORD="${{ secrets.MYSQL_PASSWORD }}",image.tag=${{ github.run_number }}  --kubeconfig=kubeconfig
