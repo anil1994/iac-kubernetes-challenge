@@ -1,4 +1,4 @@
-## Bootstraping K3S Cluster via Terragrunt
+  ## Bootstraping K3S Cluster via Terragrunt
 
 k3s is a highly available and certified Kubernetes distribution designed with simplicity at its core. It is packaged as a single < 40MB binary that reduces the dependencies and time to set up a production-ready cluster. With a simple command, you can have a cluster ready in under approximately 30 seconds. 
 
@@ -8,6 +8,8 @@ k3s is a highly available and certified Kubernetes distribution designed with si
 * Local-Path provisioner is default also as shown below.
 
 $  kubectl get storageclass  --kubeconfig=kubeconfig
+
+
 NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  3h9m
 
@@ -76,22 +78,22 @@ mysql            ClusterIP      10.43.145.42    <none>                    3306/T
 flask-chart      LoadBalancer   10.43.199.167   10.186.0.22,10.186.0.25   8080:30198/TCP   3h13m
 
 $ curl -vk 10.186.0.22:8080
-* About to connect() to 10.186.0.22 port 8080 (#0)
-*   Trying 10.186.0.22...
-* Connected to 10.186.0.22 (10.186.0.22) port 8080 (#0)
-> GET / HTTP/1.1
-> User-Agent: curl/7.29.0
-> Host: 10.186.0.22:8080
-> Accept: */*
->
-< HTTP/1.1 200 OK
-< Server: gunicorn/20.0.4
-< Date: Sun, 09 Jan 2022 23:11:54 GMT
-< Connection: close
-< Content-Type: text/html; charset=utf-8
-< Content-Length: 23
-<
-* Closing connection 0
+  About to connect() to 10.186.0.22 port 8080 (#0)
+   Trying 10.186.0.22...
+  Connected to 10.186.0.22 (10.186.0.22) port 8080 (#0)
+  GET / HTTP/1.1
+  User-Agent: curl/7.29.0
+  Host: 10.186.0.22:8080
+  Accept: */*
+ 
+  HTTP/1.1 200 OK
+  Server: gunicorn/20.0.4
+  Date: Sun, 09 Jan 2022 23:11:54 GMT
+  Connection: close
+  Content-Type: text/html; charset=utf-8
+  Content-Length: 23
+ 
+  Closing connection 0
 Hello Devops 123, 1234!
    
 ## CICD
@@ -99,5 +101,7 @@ Hello Devops 123, 1234!
  I used Github Actions used for provisining k3s cluster, building our docker application and helm chart deployment to GCP . when my code is on the github, it is so easy to integrate with CI/CD by using github action. There are many predefined github action modules. By referring these modules, I can easily integrate with CI/CD. 
  
  You can find CI/CD pipeline in the .github/workflows/main.yml
+   
+ Checkout - flake8 Lint Static Test - Auth Google - gcloud download - install prerequirements - IAC - Build AND Push Image GCR - Get kubeconfig - Helm Deploy
    
    When your environment has many platforms such as AWS,Google Cloud,Openshift, I suggest you should use jenkins CI/CD tool. Because, Jenkins have so many plugins that integrate with so many platforms (AWS,Azure,Openshift,GKE etc). When your environment has only AWS platform, also, you can use AWS Codebuild,Codedeploy,Codepipeline resources. Your github account can easily sync to AWS and you can easily integrate your code with  codepipeline.  
