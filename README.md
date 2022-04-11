@@ -2,9 +2,6 @@
 
 k3s is a highly available and certified Kubernetes distribution designed with simplicity at its core. It is packaged as a single < 40MB binary that reduces the dependencies and time to set up a production-ready cluster. With a simple command, you can have a cluster ready in under approximately 30 seconds. 
 
-You can see my k3s bootstraping and CI/CD architecture draft  as following.
-
-![This is an image](https://github.com/anil1994/iac-kubernetes-challenge/blob/main/IAC-GCP%20Diagram.drawio.png)
 
 
 There are some components of k3s.
